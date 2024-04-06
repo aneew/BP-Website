@@ -11,7 +11,7 @@
         <div id="navbar">
             <ul>
 	            <h1 style="text-align: center;">Menu</h1>
-
+                <li><a href="../index.php">Main</a></li>
                 <!-- <li><a href="#" onclick="loadPage('pages/insert.php')">Insert</a></li> -->
                 <li><a href="#" onclick="loadPage('pages/view.php')">View</a></li>
                 <!-- <li><a href="#" onclick="loadPage('pages/viewprograms.php')">ViewPrograms</a></li> -->
