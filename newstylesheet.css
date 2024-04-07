@@ -1,0 +1,71 @@
+/* Main Styles */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    display: flex;
+}
+
+.navbar {
+    width: 20%;
+    float: left;
+    background-color: #333;
+    color: #fff;
+    padding-top: 20px;
+}
+
+.navbar ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.navbar ul li {
+    padding: 10px 0;
+    text-align: center;
+}
+
+.navbar ul li a {
+    text-decoration: none;
+    color: #fff;
+    display: block;
+}
+
+.rest {
+    width: 80%;
+    float: left;
+    padding: 20px;
+}
+
+.rest ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.rest ul li {
+    padding: 10px 0;
+    text-align: center;
+}
+
+.rest ul li a {
+    text-decoration: none;
+    color: #000;
+    display: block;
+}
+
+/* Optional: Add more styling as needed */
+
+/* Media Query for Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+    }
+
+    .navbar, .rest {
+        width: 100%;
+    }
+}

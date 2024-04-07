@@ -17,6 +17,7 @@
                 <!-- <li><a href="#" onclick="loadPage('pages/viewprograms.php')">ViewPrograms</a></li> -->
                 <li><a href="#" onclick="loadPage('edit.php')">Edit</a></li>
                 <li><a href="insert1.php">Insert do DB</a></li>
+                <li><a href="result-counting.php">Vypocet</a></li>
 
             </ul>
         </div>
@@ -40,16 +41,35 @@
         if(isset($_POST['predmety'])){
             $katedra = $_POST['katedra'];
             getPredmetyByKatedra($pdo, $katedra);
+            getPredmetyByKatedraLast($pdo, $katedra);
+            setKatedra($pdo, $katedra);
+            getUcitele($pdo);
         }
 
         if(isset($_POST['x'])){
             $rok = $_POST['rok'];
             aktualnirok($pdo, $rok);
         }
+
+        if(isset($_POST['semestr'])){
+            $semestr = $_POST['semestr'];
+            aktualniSemestr($pdo, $semestr);
+        }
+
+        if(isset($_POST['oninit'])){
+            onInit($pdo);
+        }
+
         ?>
         
         <h1>INSERT</h1>
 
+        <p>Začít/začít od začátku</p>
+        <form method="post">
+            <input type="submit" name="oninit" value="load">
+        </form>
+
+        <p>Vyberte akademický rok:</p>
         <form method="post">
         <select id="rok" name="rok">
                 <!-- Option for selection -->
@@ -61,9 +81,26 @@
                 foreach ($roky as $rok) {
                     echo "<option value='{$rok['rok']}'>{$rok['akademickyrok']}</option>";
                 }
-                ?>       
+            ?>       
             </select>
             <input type="submit" name="x" value="load">
+        </form>
+
+        <p>Vyberte semestr:</p>
+        <form method="post">
+        <select id="semestr" name="semestr">
+            <!-- Možnosti pro výběr -->
+            <option value="">Vyberte...</option>
+            <?php
+            $pdo = connectToDatabase();
+            $stmt = $pdo->query("SELECT semestr FROM semestr;");
+            $semestry = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($semestry as $semestr) {
+                echo "<option value='{$semestr['semestr']}'>{$semestr['semestr']}</option>";
+            }
+            ?>       
+            </select>
+            <input type="submit" name="semestr_submit" value="Načíst">
 
         </form>
 
