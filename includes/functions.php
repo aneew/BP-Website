@@ -128,9 +128,9 @@ function getPredmetyUcitel($pdo ,$ucitIdno){
 
 }
 
-function getStudijniProgram($pdo){
+function getStudijniProgram($pdo, $fakulta){
     $rok = getYear($pdo);
-    $api_url = "https://stag-ws.utb.cz/ws/services/rest2/programy/getStudijniProgramy?kod=%25&pouzePlatne=true&fakulta=" . "&outputFormat=JSON&rok=" . $rok;
+    $api_url = "https://stag-ws.utb.cz/ws/services/rest2/programy/getStudijniProgramy?kod=%25&pouzePlatne=true&fakulta=" . $fakulta . "&outputFormat=JSON&rok=" . $rok;
     
     $response = file_get_contents($api_url);
 
@@ -384,7 +384,8 @@ function deleteKatedry($pdo)
 function deletePredmet($pdo){
     $query = "DROP TABLE predmet;
     create table predmet(
-        zkratka varchar(10) primary key,
+        id int primary key auto_increment,
+        zkratka varchar(10),
         nazev varchar(50),
         cviciciUcitIdno varchar(200),
         seminariciUcitIdno varchar(200),
@@ -556,7 +557,8 @@ function onInit($pdo){
         insert into cisfakulta (zkratka) values ('FT');
         insert into cisfakulta (zkratka) values ('IMS');
         create table predmet(
-            zkratka varchar(10) primary key,
+            id int primary key auto_increment,
+            zkratka varchar(10),
             nazev varchar(50),
             cviciciUcitIdno varchar(200),
             seminariciUcitIdno varchar(200),
@@ -584,14 +586,27 @@ function onInit($pdo){
             predmetzkratka varchar(20),
             iddbversion int);
         create table predmetlast(
-            zkratka varchar(10) primary key,
+            id int primary key auto_increment,
+            zkratka varchar(10),
             nazev varchar(50),
             cviciciUcitIdno varchar(200),
             seminariciUcitIdno varchar(200),
             prednasejiciUcitIdno varchar(200),
             vyucovaciJazyky varchar(30),
             nahrazPredmety varchar(30),
-            rok int);    
+            rok int);
+        create table ucitelpredmetprirazeni(
+            id int primary key auto_increment,
+            predmetid int,
+            teacherid int,
+            typ varchar(15) #Cvicici, prednasejici, seminarici ucitelpredmety
+            );
+        create table ucitelpredmetlast(
+            id int primary key auto_increment,
+            predmetid int,
+            teacherid int,
+            typ varchar(15) #Cvicici, prednasejici, seminarici ucitelpredmety
+            );    
         ";
     $stmt = $pdo->prepare($query);
     $stmt->execute();
@@ -709,7 +724,8 @@ function insertPredmetLast($pdo, $zkratka, $nazev, $cviciciUcitIdno, $seminarici
 function deletePredmetLast($pdo){
     $query = "DROP TABLE predmetlast;
                 create table predmetlast(
-                    zkratka varchar(10) primary key,
+                    id int primary key auto_increment,
+                    zkratka varchar(10),
                     nazev varchar(50),
                     cviciciUcitIdno varchar(200),
                     seminariciUcitIdno varchar(200),
@@ -722,3 +738,321 @@ function deletePredmetLast($pdo){
     echo nl2br("Deleted succesfully\n"); 
 
 }
+
+function loadPredmety($pdo){
+    $stmt = $pdo->query("SELECT id, zkratka, nazev FROM predmet;");
+    $predmety = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // show list of teachers
+    echo "<h2>Predmety</h2>";
+    echo "<ul>";
+    foreach ($predmety as $predmet) {
+        echo "<li><a href='javascript:void(0);' onclick='selectTeacher({$predmet['zkratka']});'>{$predmet['nazev']}</a></li>";
+        echo loadUcitelePredmetu($pdo, $predmet['id']);
+        }
+    echo "</ul>";
+
+}
+
+function stringToIntArray($string) {
+    $parts = explode(',', $string);
+   
+    $intArray = array();
+    
+    foreach ($parts as $part) {
+        $intArray[] = (int) trim($part);
+    }
+    
+    return $intArray;
+}
+
+function teachedlastyear($pdo){
+    deleteUcitelePredmety($pdo);
+    $stmt = $pdo->query("SELECT id, zkratka, cviciciUcitIdno, seminariciUcitIdno, prednasejiciUcitIdno FROM predmetlast;");
+    $predmety = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    foreach ($predmety as $predmet){
+        if($predmet['cviciciUcitIdno'] > 1){
+            $arrCvicici = stringToIntArray($predmet['cviciciUcitIdno']);
+            foreach($arrCvicici as $cvicici){
+                echo $cvicici;
+                insertTeachedLastYC($pdo, $predmet['id'], $cvicici);
+            }
+        }
+        if($predmet['seminariciUcitIdno'] > 1){
+            $arrSeminarici = stringToIntArray($predmet['seminariciUcitIdno']);
+            foreach($arrSeminarici as $seminarici){
+                insertTeachedLastYS($pdo, $predmet['id'], $seminarici);
+            }
+        }
+        if($predmet['prednasejiciUcitIdno'] > 1){
+            $arrPrednasejici = stringToIntArray($predmet['prednasejiciUcitIdno']);
+            foreach($arrPrednasejici as $prednasejici){
+                insertTeachedLastYP($pdo, $predmet['id'], $prednasejici);
+            }
+        }
+    }
+}
+
+function insertTeachedLastYC($pdo, $predmetid, $teacherid){
+    try{
+        $query = "INSERT INTO ucitelpredmetlast (predmetid, teacherid, typ) VALUES (?, ?, 'cvicici');";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$predmetid, $teacherid]);
+
+        echo nl2br("Inserted succesfully" . $predmetid . $teacherid . "\n");
+    }
+    catch(PDOException $e) {
+        echo "error" . $e->getMessage();
+    }
+}
+
+function insertTeachedLastYS($pdo, $predmetid, $teacherid){
+    try{
+        $query = "INSERT INTO ucitelpredmetlast (predmetid, teacherid, typ) VALUES (?, ?, 'seminarici');";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$predmetid, $teacherid]);
+
+        echo nl2br("Inserted succesfully" . $predmetid . $teacherid . "\n");
+    }
+    catch(PDOException $e) {
+        echo "error" . $e->getMessage();
+    }
+}
+
+function insertTeachedLastYP($pdo, $predmetid, $teacherid){
+    try{
+        $query = "INSERT INTO ucitelpredmetlast (predmetid, teacherid, typ) VALUES (?, ?, 'prednasejici');";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$predmetid, $teacherid]);
+
+        echo nl2br("Inserted succesfully" . $predmetid . $teacherid . "\n");
+    }
+    catch(PDOException $e) {
+        echo "error" . $e->getMessage();
+    }
+}
+
+function insertTeacherAssingByLastYear($pdo){
+    $stmt = $pdo->query("select p.id, p.zkratka, p.rok, pl.zkratka, pl.rok, upl.teacherid, upl.typ from predmet p
+    join predmetlast pl
+    on p.zkratka=pl.zkratka
+    join ucitelpredmetlast upl
+    on pl.id=upl.predmetid;");
+    $lasty = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach($lasty as $last){
+        insertCurrentY($pdo, $last['id'], $last['teacherid'], $last['typ']);
+    }
+}
+
+function insertCurrentY($pdo, $predmetid, $teacherid, $typ){
+    try{
+        $query = "INSERT INTO ucitelpredmetprirazeni (predmetid, teacherid, typ) VALUES (?, ?, ?);";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$predmetid, $teacherid, $typ]);
+
+        echo nl2br("Inserted succesfully" . $predmetid . $teacherid . "\n");
+    }
+    catch(PDOException $e) {
+        echo "error" . $e->getMessage();
+    }
+}
+
+function novyExternista($pdo, $jmeno, $prijmeni){
+    try{
+        $query = "INSERT INTO teachers (name, surname, ucitIdno) VALUES (?, ?, ?);";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$jmeno, $prijmeni, seq_ucitIdno($pdo)]);
+
+        echo nl2br("Inserted succesfully" . $jmeno . $prijmeni . "\n");
+    }
+    catch(PDOException $e) {
+        echo "error" . $e->getMessage();
+    }
+}
+
+function deleteUcitelePredmety($pdo){
+    $query = "delete from ucitelpredmetlast;
+    delete from ucitelpredmetprirazeni;";
+    $stmt = $pdo->prepare($query);
+    $stmt->execute();
+    echo nl2br("Deleted succesfully\n"); 
+}
+
+function seq_ucitIdno($pdo){
+    $stmt = $pdo->query("SELECT num FROM seq_ucitIdno;");
+    $number = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    echo $number[0]['num'];
+    $query = "update seq_ucitIdno set num=?;";
+    $stmt = $pdo->prepare($query);
+    $upd = $number[0]['num'] + 1;
+    $stmt->execute([$upd]);
+    return $number[0]['num'];  
+}
+
+
+function loadUcitelePredmetu($pdo, $predmet){
+    $query = "select upp.typ, t.name, t.surname from predmet p
+    join ucitelpredmetprirazeni upp
+    on p.id=upp.predmetid
+    join teachers t
+    on upp.teacherid=t.ucitidno
+    where p.id=?
+    order by upp.typ;";
+    
+    // Prepare and execute the query with the provided parameter
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([$predmet]);
+    
+    // Fetch all rows as associative array
+    $ucitele = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Show list of teachers
+    // echo "<p>Ucitele</p>";
+    echo "<ul>";
+    foreach ($ucitele as $ucitel) {
+        echo "<li>{$ucitel['typ']}: {$ucitel['surname']} {$ucitel['name']}</li>";
+    }
+    echo "</ul>";
+}
+
+function loadPredmetyV2($pdo){
+    $stmt = $pdo->query("SELECT p.id, p.zkratka, p.nazev, upp.typ, t.name, t.surname FROM predmet p
+    join ucitelpredmetprirazeni upp
+    on p.id=upp.predmetid
+    join teachers t
+    on upp.teacherid=t.ucitIdno;;");
+    $predmety = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // show list of teachers
+    echo "<h2>Predmety</h2>";
+    echo '<div class="grid-container">';
+    foreach ($predmety as $predmet) {
+        echo "<div class='grid-item'>{$predmet['nazev']}</div>
+        <div class='grid-item'>{$predmet['zkratka']}</div>
+        <div class='grid-item'>{$predmet['name']} {$predmet['surname']}</div>
+        <div class='grid-item'>{$predmet['typ']}</div>
+        <div class='grid-item'>X</div>";
+        // echo "<li><a href='javascript:void(0);' onclick='selectTeacher({$predmet['zkratka']});'>{$predmet['nazev']}</a></li>";
+        // echo loadUcitelePredmetu($pdo, $predmet['id']);
+        }
+        echo '</div>';;
+}
+
+function loadPredmetyV3($pdo){
+    $stmt = $pdo->query("SELECT p.id, p.zkratka, p.nazev, upp.typ, t.name, t.surname, t.ucitIdno FROM predmet p
+    join ucitelpredmetprirazeni upp
+    on p.id=upp.predmetid
+    join teachers t
+    on upp.teacherid=t.ucitIdno
+    order by p.nazev, upp.typ;");
+    $predmety = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // show list of teachers
+    echo "<h2>Predmety</h2>";
+    echo '<table>
+    <tr>
+    <th>Predmet</th>
+    <th>Zkratka</th>
+    <th>Name and Surname</th>
+    <th>Typ</th>
+    <th>Vymazat</th>
+    </tr>';
+    foreach ($predmety as $predmet) {
+        echo "
+        <tr>
+        <td value={$predmet['id']}>{$predmet['nazev']}</td>
+        <td>{$predmet['zkratka']}</td>
+        <td value={$predmet['ucitIdno']}>{$predmet['name']} {$predmet['surname']}</td>
+        <td value={$predmet['typ']}>{$predmet['typ']}</td>
+        <td>X</td>
+        <tr>
+        ";
+        // echo "<li><a href='javascript:void(0);' onclick='selectTeacher({$predmet['zkratka']});'>{$predmet['nazev']}</a></li>";
+        // echo loadUcitelePredmetu($pdo, $predmet['id']);
+        }
+    echo '</table>';
+}
+
+function deleteUppRecord($pdo, $predmetid, $teacherid, $typ){
+    $query = "delete from ucitelpredmetprirazeni
+    where predmetid=?
+    teacherid=?
+    and typ=?;";
+    $stmt = $pdo->prepare($query);
+    $stmt->execute();
+    echo nl2br("Deleted succesfully\n"); 
+}
+
+function loadPredmetyV4($pdo){
+    $stmt = $pdo->query("SELECT p.id, p.zkratka, p.nazev, upp.typ, t.name, t.surname, t.ucitIdno FROM predmet p
+    join ucitelpredmetprirazeni upp
+    on p.id=upp.predmetid
+    join teachers t
+    on upp.teacherid=t.ucitIdno
+    order by p.nazev, upp.typ;");
+    $predmety = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // show list of teachers
+    echo "<h2>Predmety</h2>";
+    echo '<table>
+    <tr>
+    <th>Predmet</th>
+    <th>Zkratka</th>
+    <th>Name and Surname</th>
+    <th>Typ</th>
+    <th>Vymazat</th>
+    </tr>';
+    foreach ($predmety as $predmet) {
+        echo "
+        <tr>
+        <td value='{$predmet['id']}'>{$predmet['nazev']}</td>
+        <td>{$predmet['zkratka']}</td>
+        <td value='{$predmet['ucitIdno']}'>{$predmet['name']} {$predmet['surname']}</td>
+        <td value='{$predmet['typ']}'>{$predmet['typ']}</td>
+        <td class='delete-row' data-predmetid='{$predmet['id']}' data-teacherid='{$predmet['ucitIdno']}' data-typ='{$predmet['typ']}'>X</td>
+        <tr>
+        ";
+        // echo "<li><a href='javascript:void(0);' onclick='selectTeacher({$predmet['zkratka']});'>{$predmet['nazev']}</a></li>";
+        // echo loadUcitelePredmetu($pdo, $predmet['id']);
+    }
+    echo '</table>';
+}
+
+// function deleteUppRecord2(){
+//     echo "
+//         <script>
+//             document.querySelectorAll('.delete-row').forEach(item => {
+//                 item.addEventListener('click', event => {
+//                     const predmetId = item.getAttribute('data-predmetid');
+//                     const teacherId = item.getAttribute('data-teacherid');
+//                     const typ = item.getAttribute('data-typ');
+//                     if(confirm('Are you sure you want to delete this record? Predmet ID:" . '${predmetId}, Teacher ID: ${teacherId}, Typ: ${typ}' ."')) {
+//                         deleteUppRecord2(" . '$pdo' . ", predmetId, teacherId, typ);
+//                     }
+//                 });
+//             });
+//         </script>
+//         ";
+// }
+
+function deleteUppRecord2($pdo){
+    echo "
+        <script>
+            document.querySelectorAll('.delete-row').forEach(item => {
+                item.addEventListener('click', event => {
+                    const predmetId = item.getAttribute('data-predmetid');
+                    const teacherId = item.getAttribute('data-teacherid');
+                    const typ = item.getAttribute('data-typ');
+                    if(confirm('Are you sure you want to delete this record? Predmet ID: ' + predmetId + ', Teacher ID: ' + teacherId + ', Typ: ' + typ)) {
+                        // Here, call a function to handle the deletion
+                        // For example: deleteUppRecord( " . '$pdo' . ", predmetId, teacherId, typ);
+                    }
+                });
+            });
+        </script>
+    ";
+}
+
+//UPDATE studijniprogram SET pocetstudentu=? WHERE stprIdno=?

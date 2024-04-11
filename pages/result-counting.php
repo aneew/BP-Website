@@ -21,7 +21,14 @@
             </ul>
         </div>
         <div class="rest rounded-border">
-            <h1>Tohle bude kurva tezky</h1>
+            <h1>Vypocet</h1>
+
+        <?php
+            include '../includes/functions.php';
+            include '../includes/dbh.inc.php';
+            $pdo = connectToDatabase();   
+            loadPredmety($pdo);
+        ?>
         </div>
     </body>
 

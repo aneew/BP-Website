@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="UTF-8">
-    <link rel="stylesheet" href="../stylepage.css"> 
-</head>
-<body>
-    <h1>Edit</h1>
-    <div id="navbar">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="../stylesheeres.css"> 
+        <link rel="stylesheet" href="../stylepage.css"> 
+        <script src="webfunc.js"></script>
+    </head>
+
+    <body>
+
+        <div id="navbar" class="navbar">
             <ul>
                 <h1 style="text-align: center;">Menu</h1>
                 <li><a href="../index.php">Main</a></li>
@@ -18,12 +21,17 @@
                 <li><a href="result-counting.php">Vypocet</a></li>
             </ul>
         </div>
-    <div class="rounded-border">
-        <p>Here you can edit data in our database</p>
-        <ul>
-            <li><a href="editpocetstudentu.php">EditPocetStudentu</a></li>
-            <li><a href="insertExternista.php">Insert Externisty</a></li>
-        </ul>
-    </div>
-</body>
+        <div class="rest rounded-border">
+            <h1>Vypocet</h1>
+
+        <?php
+            include '../includes/functions.php';
+            include '../includes/dbh.inc.php';
+            $pdo = connectToDatabase();   
+            loadPredmetyV4($pdo);
+            deleteUppRecord2($pdo);
+        ?>
+        </div>
+    </body>
+
 </html>

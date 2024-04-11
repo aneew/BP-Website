@@ -10,7 +10,9 @@
         <?php
         include_once 'includes/functions.php';
         include_once 'includes/dbh.inc.php';
+
         $pdo = connectToDatabase();
+      
         if(isset($_POST['oninit'])){
             onInit($pdo);
         }
@@ -26,6 +28,7 @@
                 <li><a href="pages/edit.php">Edit</a></li>
                 <li><a href="pages/insert1.php">Insert do DB</a></li>
                 <li><a href="pages/result-counting.php">Vypocet</a></li>
+                
             </ul>
         </div>
 

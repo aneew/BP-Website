@@ -35,7 +35,7 @@
             // deleteUcitelPredmety($pdo);
             // deleteStudijniProgramy($pdo);
             // getUcitele($pdo);
-            // getStudijniProgram($pdo);
+            getStudijniProgram($pdo, $fakulta);
         }
 
         if(isset($_POST['predmety'])){
@@ -44,6 +44,8 @@
             getPredmetyByKatedraLast($pdo, $katedra);
             setKatedra($pdo, $katedra);
             getUcitele($pdo);
+            teachedlastyear($pdo);
+            insertTeacherAssingByLastYear($pdo);
         }
 
         if(isset($_POST['x'])){
@@ -62,7 +64,7 @@
 
         ?>
         
-        <h1>INSERT</h1>
+        <h1>INSERT STAG</h1>
 
         <p>Začít/začít od začátku</p>
         <form method="post">
